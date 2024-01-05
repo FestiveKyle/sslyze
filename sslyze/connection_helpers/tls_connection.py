@@ -311,6 +311,16 @@ class SslConnection:
                 network_configuration=self._network_configuration,
                 error_message="Server rejected the connection",
             )
+        except _nassl.OpenSSLError as e:
+            # If these errors get propagated here, it means they're not part of the known/normal errors that
+            # can happen when trying to connect to a server and defined in tls_connection.py
+            # Hence we re-raise these as "unknown" connection errors; might be caused by bad connectivity to
+            # the server (random disconnects, etc.) and the scan against this server should not be performed
+            raise ConnectionToServerFailed(
+                server_location=self._server_location,
+                network_configuration=self._network_configuration,
+                error_message=f'Unexpected connection error: "{e.args}"',
+            )
         except OSError as e:
             # OSError is the parent of all (non-TLS) socket/connection errors so it should be last
             if "Nassl SSL handshake failed" in e.args[0]:
